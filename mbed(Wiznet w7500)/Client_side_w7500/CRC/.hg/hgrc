@@ -1,0 +1,4 @@
+[ui]
+ignore.local = .hg/hgignore
+[paths]
+default = https://os.mbed.com/users/ajeet3004/code/CRC_1/
