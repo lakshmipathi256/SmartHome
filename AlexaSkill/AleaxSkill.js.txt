@@ -1,0 +1,146 @@
+/**
+    Copyright 2014-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
+    Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance with the License. A copy of the License is located at
+
+        http://aws.amazon.com/apache2.0/
+
+    or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+*/
+
+/**
+ * App ID for the skill
+ */
+var APP_ID =undefined; //replace with "amzn1.echo-sdk-ams.app.[your-unique-value-here]";
+
+/*****/
+//Environment Configuration
+var config = {};
+config.IOT_BROKER_ENDPOINT      = "a2nqmm3vyiwl6.iot.us-east-1.amazonaws.com".toLowerCase();
+config.IOT_BROKER_REGION        = "us-east-1";
+config.IOT_THING_NAME           = "light";
+//Loading AWS SDK libraries
+var AWS = require('aws-sdk');
+AWS.config.region = config.IOT_BROKER_REGION;
+//Initializing client for IoT
+var iotData = new AWS.IotData({endpoint: config.IOT_BROKER_ENDPOINT});
+
+var AlexaSkill = require('./AlexaSkill');
+
+var HelloWorld = function () {
+    AlexaSkill.call(this, APP_ID);
+};
+
+// Extend AlexaSkill
+HelloWorld.prototype = Object.create(AlexaSkill.prototype);
+HelloWorld.prototype.constructor = HelloWorld;
+
+HelloWorld.prototype.eventHandlers.onSessionStarted = function (sessionStartedRequest, session) {
+    console.log("HelloWorld onSessionStarted requestId: " + sessionStartedRequest.requestId
+        + ", sessionId: " + session.sessionId);
+    // any initialization logic goes here
+};
+
+HelloWorld.prototype.eventHandlers.onLaunch = function (launchRequest, session, response) {
+    console.log("HelloWorld onLaunch requestId: " + launchRequest.requestId + ", sessionId: " + session.sessionId);
+    var speechOutput = "Welcome to the CDI Skills Kit, say light on or off";
+    var repromptText = "You can control CDI lab devices ";
+    response.ask(speechOutput, repromptText);
+};
+
+HelloWorld.prototype.eventHandlers.onSessionEnded = function (sessionEndedRequest, session) {
+    console.log("HelloWorld onSessionEnded requestId: " + sessionEndedRequest.requestId
+        + ", sessionId: " + session.sessionId);
+    // any cleanup logic goes here
+};
+
+HelloWorld.prototype.intentHandlers = {
+    // register custom intent handlers
+    "LightControlOnIntent": function (intent, session, response) {
+        //response.tellWithCard("Hello World!", "Hello World", "Hello World!");
+        console.log("FB started");
+        /****/
+        var repromptText = null;
+        var sessionAttributes = {};
+        var shouldEndSession = true;
+        var speechOutput = "";
+        var payloadObj="ON"; //On
+        //Prepare the parameters of the update call
+        var paramsUpdate = {
+            topic:"light",
+            payload: JSON.stringify(payloadObj),
+            qos:0
+        };
+        iotData.publish(paramsUpdate, function(err, data) {
+          if (err){
+            //Handle the error here
+            console.log("MQTT Error" + data);
+          }
+          else {
+            speechOutput = "Turning CDI lab light on now.";
+            console.log(data);
+            response.tell(speechOutput);
+            //callback(sessionAttributes,buildSpeechletResponse(intent.name, speechOutput, repromptText, shouldEndSession));
+          }    
+        });
+    },
+     "LightControlOffIntent": function (intent, session, response) {
+        console.log("FB started");
+        var repromptText = null;
+        var sessionAttributes = {};
+        var shouldEndSession = true;
+        var speechOutput = "";
+        //Set the pump to 0 for activation on the device
+        var payloadObj="OFF"; //off
+         var paramsUpdate = {
+            topic:"light",
+            payload: JSON.stringify(payloadObj),
+            qos:0
+        };
+        iotData.publish(paramsUpdate, function(err, data) {
+          if (err){
+            //Handle the error here
+            console.log("MQTT Error" + data);
+          }
+          else {
+            speechOutput = "Turning CDI lab light off now.";
+            console.log(data);
+            response.tell(speechOutput);
+            //callback(sessionAttributes,buildSpeechletResponse(intent.name, speechOutput, repromptText, shouldEndSession));
+          }    
+        });
+        /****/
+    },
+      "TemperatureData": function (intent, session, response) {
+        console.log("TemperatureData started");
+        var repromptText = null;
+        var sessionAttributes = {};
+        var shouldEndSession = true;
+        var speechOutput = "";
+        
+       iotData.getThingShadow({
+        thingName: config.IOT_THING_NAME
+    }, function(err, data) {
+        if (err) {
+            context.fail(err);
+        } else {
+            console.log(data);
+            var jsonPayload = JSON.parse(data.payload);
+            var roomTemperature = jsonPayload.state.reported.roomTemperature;
+            console.log('current temperature in CDI lab is: ' + roomTemperature);
+            /****/
+          response.tell("current temperature in CDI lab is "+ roomTemperature +" degree celsius");
+    }
+    });
+     },
+    "AMAZON.HelpIntent": function (intent, session, response) {
+        response.ask("You can ask me to turn light on or off", "You can ask me to turn light on or off");
+    }
+};
+
+// Create the handler that responds to the Alexa Request.
+exports.handler = function (event, context) {
+    // Create an instance of the HelloWorld skill.
+    var helloWorld = new HelloWorld();
+    helloWorld.execute(event, context);
+};
