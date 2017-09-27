@@ -1,0 +1,16 @@
+{
+  "intents": [
+    {
+      "intent": "LightControlOnIntent"
+    },
+    {
+      "intent": "LightControlOffIntent"
+    },
+    {
+      "intent": "TemperatureData"
+    },
+    {
+      "intent": "AMAZON.HelpIntent"
+    }
+  ]
+}

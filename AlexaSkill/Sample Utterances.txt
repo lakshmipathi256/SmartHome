@@ -1,0 +1,5 @@
+LightControlOnIntent to turn on
+LightControlOnIntent turn on
+LightControlOffIntent turn off
+LightControlOffIntent to turn off
+TemperatureData get current temperature data
